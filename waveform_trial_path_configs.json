@@ -1,0 +1,28 @@
+{
+    "90min": {
+        "h5py_file": "", 
+        "summary_file": "", 
+        "labels_file": "", 
+        "data_file": "", 
+        "hrv_ptt_file": "", 
+        "all_splits_file": "", 
+        "tachycardia": {
+            "ecg_dir_path": "", 
+            "pleth_dir_path": "", 
+            "model_suffix": "", 
+            "params_file": ""
+        },
+        "hypotension": {
+            "ecg_dir_path": "", 
+            "pleth_dir_path": "", 
+            "model_suffix": "", 
+            "params_file": ""
+        },
+        "hypoxia": {
+            "ecg_dir_path": "", 
+            "pleth_dir_path": "", 
+            "model_suffix": "", 
+            "params_file": ""
+        }
+    } 
+}
