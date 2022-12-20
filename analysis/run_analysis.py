@@ -124,11 +124,11 @@ def main():
         return 
     modes = sys.argv[1:]
     
-    file_path_config = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed_monitor_decompensation/path_configs.json"
+    file_path_config = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed-monitor-decompensation-clean/path_configs_new.json"
     with open(file_path_config) as fpc:
         all_paths = json.load(fpc)
         
-    best_models_config = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed_monitor_decompensation/best_model_configs.json"
+    best_models_config = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed-monitor-decompensation-clean/best_model_configs.json"
     with open(best_models_config) as bmc:
         best_models = json.load(bmc)
     
@@ -141,7 +141,7 @@ def main():
             configs = [best_models[time][task]["best"], best_models[time][task]["baseline"]]
             full_config = best_models[time][task]["full"]
             for mode in modes:
-                if mode in ['shap', 'characteristic', 'confusion']:
+                if mode in ['shap', 'characteristic', 'confusion', 'calibration_curve']:
                     run_single_analysis(configs, time, task, mode, time_paths)
                 elif mode == "comparison": 
                     run_pairwise_comparison(configs, time, task, time_paths, full_config)

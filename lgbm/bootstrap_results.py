@@ -199,12 +199,12 @@ def main():
     tasks = ["tachycardia", "hypotension", "hypoxia"]
     scores = ["auroc", "prscore"]
     
-    all_config_path = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed_monitor_decompensation/configs.json"
+    all_config_path = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed-monitor-decompensation-clean/configs.json"
     with open(all_config_path, 'r') as f:
         config_dict = json.load(f)
     config_names = list(config_dict.keys())
     
-    file_path_config = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed_monitor_decompensation/path_configs.json"
+    file_path_config = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed-monitor-decompensation-clean/path_configs_new.json"
     with open(file_path_config) as fpc:
         all_paths = json.load(fpc)
     
