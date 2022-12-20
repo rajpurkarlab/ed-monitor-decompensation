@@ -11,7 +11,7 @@ from verstack import LGBMTuner
 from collections import defaultdict
 
 prna_model_path = "/deep2/group/ed-monitor/models/prna/outputs-wide-64-15sec-bs64/saved_models/ctn/fold_1/ctn.tar"
-prefix_path = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed_monitor_decompensation/"
+prefix_path = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed-monitor-decompensation-clean/"
 
 import sys
 sys.path.insert(0, prefix_path)
