@@ -103,12 +103,12 @@ def main():
     device_str = "cuda"
     device = torch.device(device_str if torch.cuda.is_available() else "cpu") 
     
-    all_config_path = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed_monitor_decompensation/waveform_trial_configs.json"
+    all_config_path = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed-monitor-decompensation-clean/waveform_trial_configs.json"
     with open(all_config_path, 'r') as f:
         config_dict = json.load(f)
     config_names = list(config_dict.keys())
     
-    file_path_config = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed_monitor_decompensation/waveform_trial_path_configs.json"
+    file_path_config = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed-monitor-decompensation-clean/waveform_trial_path_configs.json"
     with open(file_path_config) as fpc:
         all_paths = json.load(fpc)
     

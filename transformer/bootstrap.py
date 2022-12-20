@@ -80,7 +80,7 @@ def main():
     tasks = ["tachycardia", "hypotension", "hypoxia"]
     times = ["90min"]
     
-    file_path_config = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed_monitor_decompensation/path_configs.json"
+    file_path_config = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed-monitor-decompensation-clean/path_configs_new.json"
     with open(file_path_config) as fpc:
         all_paths = json.load(fpc)
 

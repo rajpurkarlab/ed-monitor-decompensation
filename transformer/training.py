@@ -79,10 +79,10 @@ def main():
     leads = [('ECG', 1), ('Pleth', 1), ('All', 2)]
     times = ['60min', '90min', '120min']
 
-    save_path = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed_monitor_decompensation/transformer/saved_models/"
+    save_path = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed-monitor-decompensation-clean/transformer/saved_models/"
     prna_model_path = "/deep2/group/ed-monitor/models/prna/outputs-wide-64-15sec-bs64/saved_models/ctn/fold_1/ctn.tar"
 
-    file_path_config = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed_monitor_decompensation/path_configs.json"
+    file_path_config = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed-monitor-decompensation-clean/path_configs_new.json"
     with open(file_path_config) as fpc:
         all_paths = json.load(fpc)
     

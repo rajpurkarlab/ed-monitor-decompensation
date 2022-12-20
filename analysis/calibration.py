@@ -10,4 +10,5 @@ def plot_calibration_curve(y_true, y_prob, plot_name):
     plt.title("Calibration plot (reliability curve)")
     plt.legend()
     plt.show()
+    plt.savefig(plot_name)
     
