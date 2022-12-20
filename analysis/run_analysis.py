@@ -3,8 +3,9 @@ import torch
 import numpy as np
 import os
 import lightgbm as lgb
+import sklearn
 
-prefix_path = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed_monitor_decompensation/"
+prefix_path = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed-monitor-decompensation-clean/"
 prna_model_path = "/deep2/group/ed-monitor/models/prna/outputs-wide-64-15sec-bs64/saved_models/ctn/fold_1/ctn.tar"
 
 import sys
@@ -15,6 +16,7 @@ from transformer.data_processing import load_all_features, filter_by_index
 from analysis.features import get_feature_distributions, plot_distributions, plot_features_vs_pred_difference, plot_roc_curve
 from analysis.test_characteristics import get_test_characteristics, get_confusion_matrix
 from analysis.shap_values import get_shap_analysis
+from analysis.calibration import plot_calibration_curve
 
 def run_single_analysis(configs, time, task, mode, data_paths, thresholds=[0.85, 0.95, 0.99]):
     device_str = "cuda"
@@ -59,6 +61,9 @@ def run_single_analysis(configs, time, task, mode, data_paths, thresholds=[0.85,
             get_confusion_matrix(thresholds, final_lgbm_class, xtest, ytest, xval, yval) 
         elif mode == 'characteristic':
             get_test_characteristics(thresholds, final_lgbm_class, xtest, ytest, xval, yval) 
+        elif mode == 'calibration_curve':
+            plot_name = prefix_path + "lgbm/calibration_plots/" + time + "_" + task + "_" + config['name'] + ".png"
+            plot_calibration_curve(ytest, final_pred, plot_name)
             
 def run_pairwise_comparison(config_pair, time, task, data_paths, full_config):
 

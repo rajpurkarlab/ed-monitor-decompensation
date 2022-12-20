@@ -9,7 +9,7 @@ from sklearn.metrics import roc_auc_score
 
 from prna import preTrainedPRNA
 
-prefix_path = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed_monitor_decompensation/"
+prefix_path = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed-monitor-decompensation-clean/"
 
 from data_processing import load_model, run_batch_inference, load_all_features
 
