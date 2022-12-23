@@ -13,7 +13,7 @@ sys.path.insert(0, prefix_path)
 
 from transformer.prna import preTrainedPRNA
 from transformer.data_processing import load_all_features, filter_by_index
-from analysis.features import get_feature_distributions, plot_distributions, plot_features_vs_pred_difference, plot_roc_curve
+from analysis.features import get_feature_distributions, plot_roc_curve
 from analysis.test_characteristics import get_test_characteristics, get_confusion_matrix
 from analysis.shap_values import get_shap_analysis
 from analysis.calibration import plot_calibration_curve
@@ -120,7 +120,7 @@ def run_pairwise_comparison(config_pair, time, task, data_paths, full_config):
 
 def main():
     if len(sys.argv) < 2:
-        print("please enter one of the following analysis modes `shap`, `characteristic` or `confusion`")
+        print("please enter one of the following analysis modes `shap`, `characteristic` or `confusion` or `calibration_curve`")
         return 
     modes = sys.argv[1:]
     
