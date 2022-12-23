@@ -26,6 +26,6 @@ source /sailhome/jychen/.bashrc
 source activate ed3
 
 nvidia-smi
-python -u  /deep/group/ed-monitor-self-supervised/test_models_v1/ed-monitor-decompensation-clean/transformer/training.py
+python -u  /deep/group/ed-monitor-self-supervised/test_models_v1/ed-monitor-decompensation/transformer/training.py
 
 echo "Done"

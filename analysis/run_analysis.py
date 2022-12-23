@@ -5,7 +5,7 @@ import os
 import lightgbm as lgb
 import sklearn
 
-prefix_path = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed-monitor-decompensation-clean/"
+prefix_path = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed-monitor-decompensation/"
 prna_model_path = "/deep2/group/ed-monitor/models/prna/outputs-wide-64-15sec-bs64/saved_models/ctn/fold_1/ctn.tar"
 
 import sys
@@ -124,11 +124,11 @@ def main():
         return 
     modes = sys.argv[1:]
     
-    file_path_config = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed-monitor-decompensation-clean/path_configs_new.json"
+    file_path_config = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed-monitor-decompensation/path_configs_new.json"
     with open(file_path_config) as fpc:
         all_paths = json.load(fpc)
         
-    best_models_config = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed-monitor-decompensation-clean/best_model_configs.json"
+    best_models_config = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed-monitor-decompensation/best_model_configs.json"
     with open(best_models_config) as bmc:
         best_models = json.load(bmc)
     
