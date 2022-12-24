@@ -17,6 +17,7 @@ from analysis.features import get_feature_distributions, plot_roc_curve
 from analysis.test_characteristics import get_test_characteristics, get_confusion_matrix
 from analysis.shap_values import get_shap_analysis
 from analysis.calibration import plot_calibration_curve
+from analysis.mews import mews_subgroup
 
 def run_single_analysis(configs, time, task, mode, data_paths, thresholds=[0.85, 0.95, 0.99]):
     device_str = "cuda"
@@ -25,7 +26,7 @@ def run_single_analysis(configs, time, task, mode, data_paths, thresholds=[0.85,
     print(f"----Starting the {time} timepoint-----")
     
     prna_model_path = "/deep2/group/ed-monitor/models/prna/outputs-wide-64-15sec-bs64/saved_models/ctn/fold_1/ctn.tar"
-    path_tuple = data_paths["h5py_file"], data_paths["summary_file"], data_paths["labels_file"], data_paths["data_file"], data_paths["all_splits_file"], data_paths["hrv_ptt_file"]
+    path_tuple = data_paths["h5py_file"], data_paths["summary_file"], data_paths["labels_file"], data_paths["data_file"], data_paths["all_splits_file"], data_paths["hrv_ptt_file"], data_paths["mews_labels_file"]
 
     print(f"starting task : {task}")
     
@@ -40,16 +41,16 @@ def run_single_analysis(configs, time, task, mode, data_paths, thresholds=[0.85,
             pleth_model = data_paths[task]["pleth_model_file"]
             ecg_model = data_paths[task]["ecg_model_file"]
             data_tuple = load_all_features(path_tuple, task, 'All', get_waves=True, use_inference=True, two_models=True, model_type=model_type, 
-                                           model_path=None, pleth_model_path=pleth_model, ecg_model_path=ecg_model)
+                                           model_path=None, pleth_model_path=pleth_model, ecg_model_path=ecg_model, return_mews=True)
         else:
-            data_tuple = load_all_features(path_tuple, task, 'All', get_waves=False)
+            data_tuple = load_all_features(path_tuple, task, 'All', get_waves=False, return_mews=True)
 
         print(f"Running config: {config['name']}")
 
         best_params = all_params[config['name']]
 
-        data_tuple = filter_by_index(data_tuple, config["indices"])
-        (xtrain, xval, xtest), (ytrain, yval, ytest) = data_tuple 
+        (xtrain, xval, xtest), (ytrain, yval, ytest), (mtrain, mval, mtest) = data_tuple 
+        (xtrain, xval, xtest), (ytrain, yval, ytest) = filter_by_index(((xtrain, xval, xtest), (ytrain, yval, ytest)), config["indices"])
         
         final_lgbm_class = lgb.LGBMClassifier(**best_params)
         final_lgbm_class = final_lgbm_class.fit(xtrain, ytrain, eval_set=[(xval, yval)], eval_metric=['auc'], verbose=False)
@@ -64,6 +65,8 @@ def run_single_analysis(configs, time, task, mode, data_paths, thresholds=[0.85,
         elif mode == 'calibration_curve':
             plot_name = prefix_path + "lgbm/calibration_plots/" + time + "_" + task + "_" + config['name'] + ".png"
             plot_calibration_curve(ytest, final_pred, plot_name)
+        elif mode == 'mews':
+            mews_subgroup(mtest, xval, yval, xtest, final_lgbm_class, cutoff=3)
             
 def run_pairwise_comparison(config_pair, time, task, data_paths, full_config):
 
@@ -120,7 +123,7 @@ def run_pairwise_comparison(config_pair, time, task, data_paths, full_config):
 
 def main():
     if len(sys.argv) < 2:
-        print("please enter one of the following analysis modes `shap`, `characteristic` or `confusion` or `calibration_curve`")
+        print("please enter one of the following analysis modes `shap`, `characteristic`, `confusion`, `calibration_curve` or `mews`")
         return 
     modes = sys.argv[1:]
     
@@ -141,7 +144,7 @@ def main():
             configs = [best_models[time][task]["best"], best_models[time][task]["baseline"]]
             full_config = best_models[time][task]["full"]
             for mode in modes:
-                if mode in ['shap', 'characteristic', 'confusion', 'calibration_curve']:
+                if mode in ['shap', 'characteristic', 'confusion', 'calibration_curve', 'mews']:
                     run_single_analysis(configs, time, task, mode, time_paths)
                 elif mode == "comparison": 
                     run_pairwise_comparison(configs, time, task, time_paths, full_config)
