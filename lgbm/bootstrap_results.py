@@ -11,7 +11,7 @@ from verstack import LGBMTuner
 from collections import defaultdict
 
 prna_model_path = "/deep2/group/ed-monitor/models/prna/outputs-wide-64-15sec-bs64/saved_models/ctn/fold_1/ctn.tar"
-prefix_path = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed_monitor_decompensation/"
+prefix_path = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed-monitor-decompensation/"
 
 import sys
 sys.path.insert(0, prefix_path)
@@ -199,12 +199,12 @@ def main():
     tasks = ["tachycardia", "hypotension", "hypoxia"]
     scores = ["auroc", "prscore"]
     
-    all_config_path = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed_monitor_decompensation/configs.json"
+    all_config_path = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed-monitor-decompensation/configs.json"
     with open(all_config_path, 'r') as f:
         config_dict = json.load(f)
     config_names = list(config_dict.keys())
     
-    file_path_config = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed_monitor_decompensation/path_configs.json"
+    file_path_config = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed-monitor-decompensation/path_configs_new.json"
     with open(file_path_config) as fpc:
         all_paths = json.load(fpc)
     

@@ -6,7 +6,7 @@ from sklearn.metrics import average_precision_score, classification_report, roc_
 from tqdm import tqdm
 from scipy.stats import ttest_ind
 
-prefix_path = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed_monitor_decompensation/"
+prefix_path = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed-monitor-decompensation/"
 
 def plot_roc_curve(models, xtests, ytest):
     plt.figure()
