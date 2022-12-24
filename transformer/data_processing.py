@@ -107,11 +107,11 @@ def load_model(model_path, model_type, get_output=False):
     return model
 
 def load_all_features(path_tuple, task, lead, get_waves=False, use_inference=False, two_models=False, model_type=None, model_path=None, 
-                  pleth_model_path=None, ecg_model_path=None):
+                  pleth_model_path=None, ecg_model_path=None, return_mews=False):
     device_str = "cuda"
     device = torch.device(device_str if torch.cuda.is_available() else "cpu")   
     
-    h5py_file, summary_file, labels_file, data_file, splits_file, hrv_ptt_file = path_tuple
+    h5py_file, summary_file, labels_file, data_file, splits_file, hrv_ptt_file, mews_file = path_tuple
     # input data 
     dfx_pleth = h5py.File(h5py_file, "r").get('waveforms')["Pleth"]["waveforms"][()]
     dfx_ecg = h5py.File(h5py_file, "r").get('waveforms')["II"]["waveforms"][()]
@@ -121,6 +121,7 @@ def load_all_features(path_tuple, task, lead, get_waves=False, use_inference=Fal
     dfy = pd.read_csv(summary_file)
     data = pd.read_csv(data_file)
     labels = pd.read_csv(labels_file) 
+    mews = pd.read_csv(mews_file)
     hrv_ptt = pd.read_csv(hrv_ptt_file)
     
     #get splits from previous splitter 
@@ -129,10 +130,12 @@ def load_all_features(path_tuple, task, lead, get_waves=False, use_inference=Fal
 
     dfx = dfx[dfy['patient_id'].isin(data['CSN'])]
     labels = labels[labels['CSN'].isin(data['CSN'])]
+    mews = mews[mews['CSN'].isin(data['CSN'])]
     dfy = dfy.loc[dfy['patient_id'].isin(data['CSN'])]
     hrv_ptt = hrv_ptt.loc[hrv_ptt['CSN'].isin(data['CSN'])]
 
     # realign data, labels and dfy indices
+    # mews labels are aligned with dfy indices
     data = data.set_index('CSN')
     data = data.reindex(index=dfy['patient_id'])
     data = data.reset_index()
@@ -151,15 +154,20 @@ def load_all_features(path_tuple, task, lead, get_waves=False, use_inference=Fal
         labels = binarize(np.array(labels['SPO2']), task)
     elif task == "hypotension":
         labels = binarize(np.array(labels['MAP']), task)
-
+    
+    mews = np.array(mews["mews_score"])
+    
     xtrain = dfx[np.where(data['patient_id'].isin(splits['train_ids']))]
     ytrain = labels[np.where(data['patient_id'].isin(splits['train_ids']))]
+    mtrain = mews[np.where(data['patient_id'].isin(splits['train_ids']))]
 
     xval = dfx[np.where(data['patient_id'].isin(splits['val_ids']))]
     yval = labels[np.where(data['patient_id'].isin(splits['val_ids']))]
+    mval = mews[np.where(data['patient_id'].isin(splits['val_ids']))]
 
     xtest = dfx[np.where(data['patient_id'].isin(splits['test_ids']))]
     ytest = labels[np.where(data['patient_id'].isin(splits['test_ids']))]
+    mtest = mews[np.where(data['patient_id'].isin(splits['test_ids']))]
 
     dfx_wide = process_wide_features(data)
     xtrain_wide = dfx_wide[np.where(data['patient_id'].isin(splits['train_ids']))][:, 1:]
@@ -183,7 +191,10 @@ def load_all_features(path_tuple, task, lead, get_waves=False, use_inference=Fal
     xtest_norm = scale_input(in_np = xtest, scaler_pleth=scaler_sd_pleth, scaler_ecg=scaler_sd_ecg, leads=lead)
     
     if not get_waves:
-        return (xtrain_wide, xval_wide, xtest_wide), (ytrain, yval, ytest)
+        if not return_mews:
+            return (xtrain_wide, xval_wide, xtest_wide), (ytrain, yval, ytest)
+        else:
+            return (xtrain_wide, xval_wide, xtest_wide), (ytrain, yval, ytest), (mtrain, mval, mtest)
     if not use_inference:
         return (xtrain_norm, xval_norm, xtest_norm), (xtrain_wide, xval_wide, xtest_wide), (ytrain, yval, ytest)
     
@@ -214,8 +225,6 @@ def load_all_features(path_tuple, task, lead, get_waves=False, use_inference=Fal
         extract_model_ecg = load_model(ecg_model_path, model_type)
         extract_model_ecg.eval()
 
-        print(xtrain_norm_pleth[0])
-        print(xtrain_norm_ecg[0])
         xtrain_embed_pleth = run_batch_inference(64, xtrain_norm_pleth, extract_model_pleth)
         xval_embed_pleth = run_batch_inference(64, xval_norm_pleth, extract_model_pleth)
         xtest_embed_pleth = run_batch_inference(64, xtest_norm_pleth, extract_model_pleth)
@@ -223,9 +232,6 @@ def load_all_features(path_tuple, task, lead, get_waves=False, use_inference=Fal
         xtrain_embed_ecg = run_batch_inference(64, xtrain_norm_ecg, extract_model_ecg)
         xval_embed_ecg = run_batch_inference(64, xval_norm_ecg, extract_model_ecg)
         xtest_embed_ecg = run_batch_inference(64, xtest_norm_ecg, extract_model_ecg)
-
-        print(xtrain_embed_pleth[0])
-        print(xtrain_embed_ecg[0])
         
         xtrain_embed = np.concatenate((xtrain_embed_pleth, xtrain_embed_ecg), axis=1)
         xval_embed = np.concatenate((xval_embed_pleth, xval_embed_ecg), axis=1)
@@ -236,7 +242,10 @@ def load_all_features(path_tuple, task, lead, get_waves=False, use_inference=Fal
     all_xtest = np.concatenate((xtest_wide, xtest_embed), axis=1)
 
     # otherwise run inference
-    return (all_xtrain, all_xval, all_xtest), (ytrain, yval, ytest)
+    if not return_mews:
+        return (all_xtrain, all_xval, all_xtest), (ytrain, yval, ytest)
+    else:
+        return (all_xtrain, all_xval, all_xtest), (ytrain, yval, ytest), (mtrain, mval, mtest)
 
 def filter_by_index(data_tuple, indices):
     (xtrain, xval, xtest), (ytrain, yval, ytest) = data_tuple
