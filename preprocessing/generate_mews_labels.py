@@ -16,9 +16,6 @@ def generate_mews_labels(h5py_file, data_file, summary_file, time):
 
         sbp_numerics = f.get('numerics_after')["NBPs"]["vals"][()]
         sbp_times = f.get('numerics_after')["NBPs"]["times"][()]
-        
-        print(sbp_numerics)
-
 
     # load data_file into a pandas dataframe
     df = pd.read_csv(data_file)
@@ -29,11 +26,6 @@ def generate_mews_labels(h5py_file, data_file, summary_file, time):
     df = df.set_index('CSN')
     df = df.reindex(index=summary['patient_id'])
     df = df.reset_index()
-    
-    print(rr_times.shape)
-    print(len(rr_times[0]))
-    print(rr_times)
-    print(rr_numerics)
 
     # get the column named "Triage_temp" afrom the dataframe
     triage_temp = df["Triage_Temp"]
@@ -93,19 +85,17 @@ def generate_mews_labels(h5py_file, data_file, summary_file, time):
                 triage_temp_score = 2
 
             mews_score[i, j] = rr_score + hr_score + sbp_score + triage_temp_score
-            
-    print(mews_score)
-    
+                
     # get the max mews score for each patient
     mews_score = np.max(mews_score, axis=1)
     
     print(mews_score)
     
-    # save mews_score to a csv file 
-    np.savetxt(f"labels_{time}_mews.csv", mews_score, delimiter=",")
+    df = pd.DataFrame({'CSN': summary['patient_id'], 'mews_score': mews_score})
+    df.to_csv(f"labels_{time}_mews.csv", index=False)
 
 def main():
-    file_path_config = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed-monitor-decompensation-clean/path_configs_new.json"
+    file_path_config = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed-monitor-decompensation/path_configs_new.json"
     with open(file_path_config) as fpc:
         all_paths = json.load(fpc)
         
