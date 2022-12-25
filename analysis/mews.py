@@ -19,6 +19,7 @@ def mews_subgroup(mews_labels, xval, yval, xtest, lgbm, cutoff=5):
     binned_pred = np.where(preds > th, 1, 0) # binarized predictions bucketed at thresholds
     
     # get the indices of the patients with mews score >= cutoff and mews score < cutoff
+    # excludes values where the mews score is NaN
     mews_pos_indices = np.where(mews_labels == 1)
     mews_neg_indices = np.where(mews_labels == 0)
 
