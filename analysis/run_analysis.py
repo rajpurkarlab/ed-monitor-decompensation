@@ -66,7 +66,7 @@ def run_single_analysis(configs, time, task, mode, data_paths, thresholds=[0.85,
             plot_name = prefix_path + "lgbm/calibration_plots/" + time + "_" + task + "_" + config['name'] + ".png"
             plot_calibration_curve(ytest, final_pred, plot_name)
         elif mode == 'mews':
-            mews_subgroup(mtest, xval, yval, xtest, final_lgbm_class, cutoff=3)
+            mews_subgroup(mtest, xval, yval, xtest, final_lgbm_class, cutoff=5)
             
 def run_pairwise_comparison(config_pair, time, task, data_paths, full_config):
 
