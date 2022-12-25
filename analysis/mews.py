@@ -31,6 +31,6 @@ def mews_subgroup(mews_labels, xval, yval, xtest, lgbm, cutoff=5):
     mews_neg_pred_pos = np.sum(binned_pred[mews_neg_indices] == 1)
     mews_neg_pred_neg = np.sum(binned_pred[mews_neg_indices] == 0)
 
-    print(f"MEWS Score >= {cutoff}: \n Predicted Positive: {} \t Predicted Negative: {} \t Total: {}".format(mews_pos_pred_pos, mews_pos_pred_neg, mews_pos_pred_pos + mews_pos_pred_neg))
-    print(f"MEWS Score < {cutoff}: \n Predicted Positive: {} \t Predicted Negative: {} \t Total: {}".format(mews_neg_pred_pos, mews_neg_pred_neg, mews_neg_pred_pos + mews_neg_pred_neg))
+    print("MEWS Score >= {}: \n Predicted Positive: {} \t Predicted Negative: {} \t Total: {}".format(cutoff, mews_pos_pred_pos, mews_pos_pred_neg, mews_pos_pred_pos + mews_pos_pred_neg))
+    print("MEWS Score < {}: \n Predicted Positive: {} \t Predicted Negative: {} \t Total: {}".format(cutoff, mews_neg_pred_pos, mews_neg_pred_neg, mews_neg_pred_pos + mews_neg_pred_neg))
 
