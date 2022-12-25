@@ -42,7 +42,9 @@ def generate_mews_labels(h5py_file, data_file, summary_file, time):
     for i in range(rr_times.shape[0]):
         # loop over all time steps
         for j in range(rr_times.shape[1]):
-            if rr_numerics[i, j] < 9:
+            if np.isnan(rr_numerics[i, j]):
+                rr_score = np.nan
+            elif rr_numerics[i, j] < 9:
                 rr_score = 2
             elif rr_numerics[i, j] < 15:
                 rr_score = 0
@@ -50,10 +52,14 @@ def generate_mews_labels(h5py_file, data_file, summary_file, time):
                 rr_score = 1
             elif rr_numerics[i, j] < 30:
                 rr_score = 2
-            else:
+            elif rr_numerics[i, j] >= 30:
                 rr_score = 3
+            else:
+                raise Exception("unsupported input data type")
 
-            if hr_numerics[i, j] < 40:
+            if np.isnan(hr_numerics[i, j]):
+                hr_score = np.nan
+            elif hr_numerics[i, j] < 40:
                 hr_score = 2
             elif hr_numerics[i, j] < 51:
                 hr_score = 1
@@ -63,10 +69,14 @@ def generate_mews_labels(h5py_file, data_file, summary_file, time):
                 hr_score = 1
             elif hr_numerics[i, j] < 130:
                 hr_score = 2
-            else:
+            elif hr_numerics[i, j] >= 130:
                 hr_score = 3
+            else:
+                raise Exception("unsupported input data type")
 
-            if sbp_numerics[i, j] <= 70:
+            if np.isnan(sbp_numerics[i, j]):
+                sbp_score = np.nan
+            elif sbp_numerics[i, j] <= 70:
                 sbp_score = 3
             elif sbp_numerics[i, j] < 81:
                 sbp_score = 2
@@ -74,20 +84,29 @@ def generate_mews_labels(h5py_file, data_file, summary_file, time):
                 sbp_score = 1
             elif sbp_numerics[i, j] < 200:
                 sbp_score = 0
-            else:
+            elif sbp_numerics[i, j]:
                 sbp_score = 2
+            else:
+                raise Exception("unsupported input data type")
 
-            if triage_temp[i] < 35:
+            if np.isnan(triage_temp[i]): 
+                triage_temp_score = np.nan
+            elif triage_temp[i] < 35:
                 triage_temp_score = 2
             elif triage_temp[i] < 38.5:
                 triage_temp_score = 0
-            else:
+            elif triage_temp[i] >= 38.5:
                 triage_temp_score = 2
-
+            else:
+                raise Exception("unsupported input data type")
+            
+            if np.isnan(triage_temp_score) or np.isnan(rr_score) or np.isnan(hr_score) or np.isnan(sbp_score):
+                mews_score[i, j] = np.nan
+            
             mews_score[i, j] = rr_score + hr_score + sbp_score + triage_temp_score
-                
+    
     # get the max mews score for each patient
-    mews_score = np.max(mews_score, axis=1)
+    mews_score = np.nanmax(mews_score, axis=1)
     
     print(mews_score)
     
@@ -111,3 +130,4 @@ if __name__ == "__main__":
     main()
 
     
+ 
