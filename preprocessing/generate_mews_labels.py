@@ -37,74 +37,102 @@ def generate_mews_labels(h5py_file, data_file, summary_file, time):
     # Triage temperature score: 2 if Triage_temp < 35, 0 if 35 <= Triage_temp < 38.5, 2 if Triage_temp >= 38.5
     # mews score = RR score + HR score + SBP score + Triage temperature score
     mews_score = np.zeros_like(rr_times)
-    
+
     # loop over all patients
     for i in range(rr_times.shape[0]):
+        last_rr = np.nan
+        last_hr = np.nan
+        last_sbp = np.nan
+        triage_temp_score = 0
+        
+        if np.isnan(triage_temp[i]): 
+            triage_temp_score = 0
+        elif triage_temp[i] < 35:
+            triage_temp_score = 2
+        elif triage_temp[i] < 38.5:
+            triage_temp_score = 0
+        elif triage_temp[i] >= 38.5:
+            triage_temp_score = 2
+        else:
+            raise Exception("unsupported input data type")
+        
         # loop over all time steps
         for j in range(rr_times.shape[1]):
+            
+            rr_score = np.nan
+            hr_score = np.nan
+            sbp_score = np.nan
+            
             if np.isnan(rr_numerics[i, j]):
+                rr_to_use = last_rr
+            else:
+                rr_to_use = rr_numerics[i, j]
+                
+            if np.isnan(rr_to_use):
                 rr_score = np.nan
-            elif rr_numerics[i, j] < 9:
+            elif rr_to_use < 9:
                 rr_score = 2
-            elif rr_numerics[i, j] < 15:
+            elif rr_to_use < 15:
                 rr_score = 0
-            elif rr_numerics[i, j] < 21:
+            elif rr_to_use < 21:
                 rr_score = 1
-            elif rr_numerics[i, j] < 30:
+            elif rr_to_use < 30:
                 rr_score = 2
-            elif rr_numerics[i, j] >= 30:
+            elif rr_to_use >= 30:
                 rr_score = 3
             else:
                 raise Exception("unsupported input data type")
+            last_rr = rr_to_use
 
             if np.isnan(hr_numerics[i, j]):
+                hr_to_use = last_hr
+            else:
+                hr_to_use = hr_numerics[i, j]
+                
+            if np.isnan(hr_to_use):
                 hr_score = np.nan
-            elif hr_numerics[i, j] < 40:
+            elif hr_to_use < 40:
                 hr_score = 2
-            elif hr_numerics[i, j] < 51:
+            elif hr_to_use < 51:
                 hr_score = 1
-            elif hr_numerics[i, j] < 101:
+            elif hr_to_use < 101:
                 hr_score = 0
-            elif hr_numerics[i, j] < 111:
+            elif hr_to_use < 111:
                 hr_score = 1
-            elif hr_numerics[i, j] < 130:
+            elif hr_to_use < 130:
                 hr_score = 2
-            elif hr_numerics[i, j] >= 130:
+            elif hr_to_use >= 130:
                 hr_score = 3
             else:
                 raise Exception("unsupported input data type")
+            last_hr = hr_to_use
 
             if np.isnan(sbp_numerics[i, j]):
+                sbp_to_use = last_sbp
+            else:
+                sbp_to_use = sbp_numerics[i, j]
+                
+            if np.isnan(sbp_to_use):
                 sbp_score = np.nan
-            elif sbp_numerics[i, j] <= 70:
+            elif sbp_to_use <= 70:
                 sbp_score = 3
-            elif sbp_numerics[i, j] < 81:
+            elif sbp_to_use < 81:
                 sbp_score = 2
-            elif sbp_numerics[i, j] < 101:
+            elif sbp_to_use < 101:
                 sbp_score = 1
-            elif sbp_numerics[i, j] < 200:
+            elif sbp_to_use < 200:
                 sbp_score = 0
-            elif sbp_numerics[i, j]:
+            elif sbp_to_use >= 200:
                 sbp_score = 2
             else:
                 raise Exception("unsupported input data type")
-
-            if np.isnan(triage_temp[i]): 
-                triage_temp_score = np.nan
-            elif triage_temp[i] < 35:
-                triage_temp_score = 2
-            elif triage_temp[i] < 38.5:
-                triage_temp_score = 0
-            elif triage_temp[i] >= 38.5:
-                triage_temp_score = 2
-            else:
-                raise Exception("unsupported input data type")
+            last_sbp = sbp_to_use
             
-            if np.isnan(triage_temp_score) or np.isnan(rr_score) or np.isnan(hr_score) or np.isnan(sbp_score):
+            if np.isnan(rr_score) or np.isnan(hr_score) or np.isnan(sbp_score):
                 mews_score[i, j] = np.nan
             
             mews_score[i, j] = rr_score + hr_score + sbp_score + triage_temp_score
-    
+      
     # get the max mews score for each patient
     mews_score = np.nanmax(mews_score, axis=1)
     
