@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import json
+import sys
 
 from prediction_module import DecompensationPrediction
 import pytorch_lightning as pl
@@ -16,6 +17,9 @@ from pytorch_lightning.loggers import WandbLogger
 wandb.login()
 
 from prna import preTrainedPRNA
+
+TASK_TUPLE_DICT = {'MAP': ('MAP', 'hypotension'), 'SpO2': ('SpO2', 'hypoxia'), 'HR': ('HR', 'tachycardia'), 'MEWS': ('MEWS', 'mews')}
+LEAD_TUPLE_DICT = {'ECG': ('ECG', 1), 'Pleth': ('Pleth', 1), 'All': ('All', 2)}
 
 def train_models(config, path_tuple, w_logger, path, num_epochs=50, num_gpus=1, seed=42):  
     pl.seed_everything(seed, workers=True)
@@ -37,9 +41,7 @@ def train_models(config, path_tuple, w_logger, path, num_epochs=50, num_gpus=1, 
                 nn.init.xavier_uniform_(p)
     
     dx = DecompensationDataset(config["batch_size"], path_tuple, 
-                                       config["task"], config["lead"], include_base=True, 
-                                       include_first_mon=True, include_trend=True, include_cc=True, 
-                                       include_ptt=False, include_hrv=False)
+                                       config["task"], config["lead"])
     lr_monitor = LearningRateMonitor(logging_interval="epoch")
     trainer = pl.Trainer(gpus=num_gpus,max_epochs=num_epochs,callbacks=[checkpoint_callback, lr_monitor], logger = w_logger, deterministic=True, num_sanity_val_steps=0)
     
@@ -72,12 +74,16 @@ def run_configs(config_list, train_fn, path_tuple, epochs=100):
         print(result)
         wandb.finish()
 
-        
+# run training.py <embedding_layer size> <task> <lead> <time>
+# embedding size is a power of 2 ranging from 4 to 128
+# task is one of 'MAP', 'HR', 'SpO2', 'MEWS'
+# lead is one of 'ECG', 'Pleth', 'All'
+# time is one of '60min', '90min' or '120min'
 def main():
-    layer_sizes = [4, 8, 16, 32, 64, 128] # size of output embedding layer
-    tasks = [('MAP', 'hypotension'), ('SpO2', 'hypoxia'), ('HR', 'tachycardia')]
-    leads = [('ECG', 1), ('Pleth', 1), ('All', 2)]
-    times = ['60min', '90min', '120min']
+    layer_size = int(sys.argv[1])
+    task = TASK_TUPLE_DICT[sys.argv[2]]
+    lead = LEAD_TUPLE_DICT[sys.argv[3]]
+    time = sys.argv[4]
 
     save_path = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed-monitor-decompensation/transformer/saved_models/"
     prna_model_path = "/deep2/group/ed-monitor/models/prna/outputs-wide-64-15sec-bs64/saved_models/ctn/fold_1/ctn.tar"
@@ -87,24 +93,27 @@ def main():
         all_paths = json.load(fpc)
     
     config_list = []
-    for sz in layer_sizes:
-        for time in times:    
-            data_paths = all_paths[time]
-            path_tuple = data_paths["h5py_file"], data_paths["summary_file"], data_paths["labels_file"], data_paths["data_file"], data_paths["all_splits_file"], data_paths["hrv_ptt_file"]
+   
+    data_paths = all_paths[time]
+    task_name = task[1]
+    
+    if task_name != 'mews':
+        path_tuple = data_paths["h5py_file"], data_paths["summary_file"], data_paths["labels_file"], data_paths["data_file"], data_paths["all_splits_file"], data_paths["hrv_ptt_file"]
+    else:
+        path_tuple = data_paths["h5py_file"], data_paths["summary_file"], data_paths["mews_labels_file"], data_paths["data_file"], data_paths["all_splits_file"], data_paths["hrv_ptt_file"]
 
-            for lead in leads:
-                mod = preTrainedPRNA(lead[1], 1, True, 64, sz, prna_model_path)
-                model_name = str(sz) + "WF_PreTrainedPRNAFeatures_0W_RELU_SGD-m0.9_ep30_step-g0.975-maxlr1e-3_b64"
+    # our model omits wide features and is trained on waveform features alone 
+    mod = preTrainedPRNA(lead[1], 1, True, 64, layer_size, prna_model_path, num_wide=0)
+    model_name = str(layer_size) + "WF_PreTrainedPRNAFeatures_0W_RELU_SGD-m0.9_ep30_step-g0.975-maxlr1e-3_b64"
 
-                for task in tasks:
-                    proj= time + task[0] + '_60Sec_0W_NewSplits_NoAbnormalities' + lead[0]
-                    task_name = task[1]
+    proj= time + task[0] + '_60Sec_0W_NewSplits_NoAbnormalities' + lead[0]
+    
 
-                    new_config =  {"project": proj, "name": model_name, 
-                                     "batch_size": 64, "model": mod, "epochs":60, "pre-trained": True,
-                                     "gamma":0.975, "momentum":0.9, "maxlr":0.001, "minlr":0.00001, "step": 10, "nesterov":False, "wd":1e-3, 
-                                     "task": task_name, "lead": lead[0], "save_path": save_path}
-                    config_list.append(new_config)
+    new_config =  {"project": proj, "name": model_name, 
+                    "batch_size": 64, "model": mod, "epochs":60, "pre-trained": True,
+                    "gamma":0.975, "momentum":0.9, "maxlr":0.001, "minlr":0.00001, "step": 10, "nesterov":False, "wd":1e-3, 
+                    "task": task_name, "lead": lead[0], "save_path": save_path}
+    config_list.append(new_config)
         
     wandb.finish()
     run_configs(config_list, train_models, path_tuple)
