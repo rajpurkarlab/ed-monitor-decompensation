@@ -15,6 +15,8 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 # Load pre-trained PRNA models
 # With fully connected layer pre-trained to classify cardiac abnormalities
 
+# By default the transformer model omits wide features, however users can modify this parameter 
+# when initializing a class instance
 class preTrainedPRNA(torch.nn.Module):
     def __init__(self, num_leads, classes, remove_last_layer, embedding_size, layer_sz, model_path, num_wide=0):
         super(preTrainedPRNA, self).__init__()
