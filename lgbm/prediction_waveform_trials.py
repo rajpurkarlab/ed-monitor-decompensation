@@ -113,17 +113,22 @@ def main():
         all_paths = json.load(fpc)
     
     times = ["90min"]
-    tasks = ["tachycardia", "hypotension", "hypoxia"]
+    tasks = ["tachycardia", "hypotension", "hypoxia", "mews"]
     
     for time in times:
         print(f"----Starting the {time} timepoint-----")
         
         data_paths = all_paths[time]
-        path_tuple = data_paths["h5py_file"], data_paths["summary_file"], data_paths["labels_file"], data_paths["data_file"], data_paths["all_splits_file"], data_paths["hrv_ptt_file"]
-
+        
         for task in tasks:
             auroc_dict, pr_dict, param_dict = defaultdict(list), defaultdict(list), defaultdict(list)
             print(f"starting task : {task}")
+            
+            # get mews labels file instead of VS labels file if applicable
+            if task != 'mews':
+                path_tuple = data_paths["h5py_file"], data_paths["summary_file"], data_paths["labels_file"], data_paths["data_file"], data_paths["all_splits_file"], data_paths["hrv_ptt_file"]
+            else:
+                path_tuple = data_paths["h5py_file"], data_paths["summary_file"], data_paths["mews_labels_file"], data_paths["data_file"], data_paths["all_splits_file"], data_paths["hrv_ptt_file"]
             
             for name in config_names:
                 config = config_dict[name]

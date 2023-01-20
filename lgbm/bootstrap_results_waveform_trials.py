@@ -19,24 +19,16 @@ sys.path.insert(0, prefix_path)
 from transformer.prna import preTrainedPRNA
 from transformer.data_processing import load_all_features, filter_by_index
 
-def load_results(time):
+def load_results(time, task):
     """
     load saved auroc and pr results from test set
     """
-    with open(prefix_path + time + "_tachycardia_waveform_trial_results_auroc.json", 'r') as f:
-        total_tachy = json.load(f)
-    with open(prefix_path + time + "_tachycardia_waveform_trial_results_pr.json", 'r') as f:
-        total_tachy_pr = json.load(f)
-    with open(prefix_path + time + "_hypoxia_waveform_trial_results_auroc.json", 'r') as f:
-        total_hypoxia = json.load(f)
-    with open(prefix_path + time + "_hypoxia_waveform_trial_results_pr.json", 'r') as f:
-        total_hypoxia_pr = json.load(f)
-    with open(prefix_path + time + "_hypotension_waveform_trial_results_auroc.json", 'r') as f:
-        total_hypotension = json.load(f)
-    with open(prefix_path + time + "_hypotension_waveform_trial_results_pr.json", 'r') as f:
-        total_hypotension_pr = json.load(f)
+    with open(prefix_path + "lgbm/results/" + time + "_" + task + "_waveform_trial_results_auroc.json", 'r') as f:
+        total_auroc = json.load(f)
+    with open(prefix_path + "lgbm/results/" + time + "_" + task + "_waveform_trial_results_pr.json", 'r') as f:
+        total_pr = json.load(f)
         
-    return total_tachy, total_tachy_pr, total_hypoxia, total_hypoxia_pr, total_hypotension, total_hypotension_pr
+    return total_auroc, total_pr
 
     
 def bootstrap_results(hpams, data_paths, config_names, config_dict, time, task, num_bootstrap=10000):
@@ -48,7 +40,11 @@ def bootstrap_results(hpams, data_paths, config_names, config_dict, time, task, 
     
     print(f"----Bootstrapping the {time} timepoint for the {task} task-----")
     
-    path_tuple = data_paths["h5py_file"], data_paths["summary_file"], data_paths["labels_file"], data_paths["data_file"], data_paths["all_splits_file"], data_paths["hrv_ptt_file"]
+    # get mews labels file instead of VS labels file if applicable
+    if task != 'mews':
+        path_tuple = data_paths["h5py_file"], data_paths["summary_file"], data_paths["labels_file"], data_paths["data_file"], data_paths["all_splits_file"], data_paths["hrv_ptt_file"]
+    else:
+        path_tuple = data_paths["h5py_file"], data_paths["summary_file"], data_paths["mews_labels_file"], data_paths["data_file"], data_paths["all_splits_file"], data_paths["hrv_ptt_file"]
 
     all_preds = {}
     for name in config_names:
@@ -125,28 +121,18 @@ def get_output_tables_point_CI(input_bootstrap_file1, time, task, score="auroc")
     """
     df = pd.read_csv(input_bootstrap_file1)
     
-    total_tachy, total_tachy_pr, total_hypoxia, total_hypoxia_pr, total_hypotension, total_hypotension_pr = load_results(time)
+    total_auroc, total_pr = load_results(time, task)
   
     total_results = {}
            
     for col in list(df.columns):
         sorted_res = list(df[col]) 
         sorted_res.sort()
-        if task == "tachycardia":
-            if score == "prscore":
-                point = round(total_tachy_pr[col][0], 3)
-            else:
-                point = round(total_tachy[col][0], 3)
-        if task == "hypotension":
-            if score == "prscore":
-                point = round(total_hypotension_pr[col][0], 3)
-            else:
-                point = round(total_hypotension[col][0], 3)
-        if task == "hypoxia":
-            if score == "prscore":
-                point = round(total_hypoxia_pr[col][0], 3) 
-            else:
-                point = round(total_hypoxia[col][0], 3)     
+        if score == "prscore":
+            point = round(total_pr[col][0], 3) 
+        else:
+            point = round(total_auroc[col][0], 3) 
+            
         low = round(np.percentile(list(df[col]) , 2.5), 3)
         high = round(np.percentile(list(df[col]) , 97.5), 3)
         total_results[col] = [str(point) + " " + "(" + str(low) + " - " + str(high) + ")"]
@@ -161,28 +147,19 @@ def get_output_tables_point_CI_diff(input_bootstrap_file1, time, task, score, pe
     """
     df = pd.read_csv(input_bootstrap_file1)
 
-    total_tachy, total_tachy_pr, total_hypoxia, total_hypoxia_pr, total_hypotension, total_hypotension_pr = load_results(time)
+    total_auroc, total_pr = load_results(time, task)
+    
     total_results = {}
     
     columns_to_search = list(df.columns)
     for col in columns_to_search[1:]:
         sorted_res = list(df[col]) 
         sorted_res.sort()
-        if task == "tachycardia":
-            if score == "prscore":
-                point = round(total_tachy_pr[col][0] - total_tachy_pr[columns_to_search[0]][0], 3)
-            else:
-                point = round(total_tachy[col][0] - total_tachy[columns_to_search[0]][0], 3)
-        if task == "hypotension":
-            if score == "prscore":
-                point = round(total_hypotension_pr[col][0] - total_hypotension_pr[columns_to_search[0]][0], 3)
-            else:
-                point = round(total_hypotension[col][0] - total_hypotension[columns_to_search[0]][0], 3)
-        if task == "hypoxia":
-            if score == "prscore":
-                point = round(total_hypoxia_pr[col][0] - total_hypoxia_pr[columns_to_search[0]][0], 3) 
-            else:
-                point = round(total_hypoxia[col][0] - total_hypoxia[columns_to_search[0]][0], 3)     
+        if score == "prscore":
+            point = round(total_pr[col][0] - total_pr[columns_to_search[0]][0], 3) 
+        else:
+            point = round(total_auroc[col][0] - total_auroc[columns_to_search[0]][0], 3)  
+            
         low = round(np.percentile(list(df[col]) , percentiles[0]), 3)
         high = round(np.percentile(list(df[col]) ,percentiles[1]), 3)
         total_results[col] = [str(point) + " " + "(" + str(low) + " - " + str(high) + ")"]
@@ -196,7 +173,7 @@ def main():
     run bootstraps for every time and every task (and save results)
     """
     times = ["90min"]  
-    tasks = ["tachycardia", "hypotension", "hypoxia"]
+    tasks = ["tachycardia", "hypotension", "hypoxia", "mews"]
     scores = ["auroc", "prscore"]
     
     all_config_path = "/deep/group/ed-monitor-self-supervised/test_models_v1/ed-monitor-decompensation/waveform_trial_configs.json"
