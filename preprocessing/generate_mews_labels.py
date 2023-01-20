@@ -5,6 +5,8 @@ import json
 
 TIMES = ['60min', '90min', '120min']
 
+
+
 def generate_mews_labels(h5py_file, data_file, summary_file, time):
 
     with h5py.File(h5py_file, "r") as f:
@@ -55,7 +57,7 @@ def generate_mews_labels(h5py_file, data_file, summary_file, time):
             triage_temp_score = 2
         else:
             raise Exception("unsupported input data type")
-        
+                
         # loop over all time steps
         for j in range(rr_times.shape[1]):
             
@@ -67,6 +69,7 @@ def generate_mews_labels(h5py_file, data_file, summary_file, time):
                 rr_to_use = last_rr
             else:
                 rr_to_use = rr_numerics[i, j]
+                last_rr = rr_to_use
                 
             if np.isnan(rr_to_use):
                 rr_score = np.nan
@@ -82,12 +85,12 @@ def generate_mews_labels(h5py_file, data_file, summary_file, time):
                 rr_score = 3
             else:
                 raise Exception("unsupported input data type")
-            last_rr = rr_to_use
 
             if np.isnan(hr_numerics[i, j]):
                 hr_to_use = last_hr
             else:
                 hr_to_use = hr_numerics[i, j]
+                last_hr = hr_to_use
                 
             if np.isnan(hr_to_use):
                 hr_score = np.nan
@@ -105,12 +108,12 @@ def generate_mews_labels(h5py_file, data_file, summary_file, time):
                 hr_score = 3
             else:
                 raise Exception("unsupported input data type")
-            last_hr = hr_to_use
 
             if np.isnan(sbp_numerics[i, j]):
                 sbp_to_use = last_sbp
             else:
                 sbp_to_use = sbp_numerics[i, j]
+                last_sbp = sbp_to_use
                 
             if np.isnan(sbp_to_use):
                 sbp_score = np.nan
@@ -126,13 +129,12 @@ def generate_mews_labels(h5py_file, data_file, summary_file, time):
                 sbp_score = 2
             else:
                 raise Exception("unsupported input data type")
-            last_sbp = sbp_to_use
             
             if np.isnan(rr_score) or np.isnan(hr_score) or np.isnan(sbp_score):
                 mews_score[i, j] = np.nan
             
             mews_score[i, j] = rr_score + hr_score + sbp_score + triage_temp_score
-      
+    
     # get the max mews score for each patient
     mews_score = np.nanmax(mews_score, axis=1)
     
