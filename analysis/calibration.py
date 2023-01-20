@@ -25,8 +25,8 @@ def plot_calibration_curve(y_true, y_prob, plot_name):
     
     plt.plot(mean_predicted_value, fraction_of_positives, "s-")
     plt.plot([min_x, max_y], [min_x, max_y], "k:", label="Perfectly calibrated")
-    plt.ylabel("Fraction of positives")
-    plt.xlabel("Mean predicted value")
+    plt.ylabel("Proportion positive")
+    plt.xlabel("Mean predicted probability")
     plt.title("Calibration plot (reliability curve)")
     plt.legend()
     plt.show()
