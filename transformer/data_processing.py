@@ -10,19 +10,29 @@ from torch import nn
 import torch
 import random 
 
+TACHYCARDIA_CUTOFF = 110
+HYPOTENSION_CUTOFF = 65
+HYPOXIA_CUTOFF = 90
+MEWS_CUTOFF = 4
+
 # labels is a vector of label vectors to be turned into binary labels based off 
 # the cutoff threshold value
-def binarize(labels, task):
-    binarized = np.empty_like(labels)
+def binarize(labels, task, mews_cutoff=MEWS_CUTOFF):
+    binarized = np.zeros_like(labels)
+    binarized[:] = np.nan
     if task == "tachycardia":
-        binarized[labels <= 110] = 0
-        binarized[labels > 110] = 1
+        binarized[labels <= TACHYCARDIA_CUTOFF] = 0
+        binarized[labels > TACHYCARDIA_CUTOFF] = 1
     elif task == "hypoxia":
-        binarized[labels < 90] = 1
-        binarized[labels >= 90] = 0
+        binarized[labels < HYPOXIA_CUTOFF] = 1
+        binarized[labels >= HYPOXIA_CUTOFF] = 0
     elif task == "hypotension":
-        binarized[labels >= 65] = 0
-        binarized[labels < 65] = 1
+        binarized[labels >= HYPOTENSION_CUTOFF] = 0
+        binarized[labels < HYPOTENSION_CUTOFF] = 1
+    elif task == "mews":
+        binarized[labels < mews_cutoff] = 0
+        binarized[labels >= mews_cutoff] = 1
+    
     binarized = np.ravel(binarized)
     return binarized
 
@@ -106,12 +116,27 @@ def load_model(model_path, model_type, get_output=False):
         model = torch.nn.Sequential(model.model, model.fc1)
     return model
 
-def load_all_features(path_tuple, task, lead, get_waves=False, use_inference=False, two_models=False, model_type=None, model_path=None, 
-                  pleth_model_path=None, ecg_model_path=None, return_mews=False):
+"""
+Loads up the data arrays for train, val and test splits 
+
+Returns a data tuple of the form (xtrain, xval, xtest), (ytrain, yval, ytest) if use_inference set to true
+xtrain contains in the following order numerics data (triage -> first monitoring), PTT, HRV, Perfusion index, 
+and ECG/PPG waveform embeddings (optional if get_waves is False)
+If two_models flag is set to false, users will receive a single model's output for waveform embeddings
+If set to true, users will receive a concatenation of PPG -> ECG waveforms 
+
+To access raw waveforms, use_inference can be set to false and the output will instead consist of 3 tuples
+(xtrain_norm, xval_norm, xtest_norm), (xtrain_wide, xval_wide, xtest_wide), (ytrain, yval, ytest)
+Arrays with the suffix `_norm` are tensors of dimension (n_patients, waveform channels, n_timepoints)
+
+y values represent labels, either for tachycardia, hypotension, hypoxia or mews score predictions 
+"""
+def load_all_features(path_tuple, task, lead, get_waves=False, use_inference=False, two_models=False, model_type=None, 
+                      model_path=None, pleth_model_path=None, ecg_model_path=None, mews_cutoff=4):
     device_str = "cuda"
     device = torch.device(device_str if torch.cuda.is_available() else "cpu")   
     
-    h5py_file, summary_file, labels_file, data_file, splits_file, hrv_ptt_file, mews_file = path_tuple
+    h5py_file, summary_file, labels_file, data_file, splits_file, hrv_ptt_file = path_tuple
     # input data 
     dfx_pleth = h5py.File(h5py_file, "r").get('waveforms')["Pleth"]["waveforms"][()]
     dfx_ecg = h5py.File(h5py_file, "r").get('waveforms')["II"]["waveforms"][()]
@@ -121,7 +146,6 @@ def load_all_features(path_tuple, task, lead, get_waves=False, use_inference=Fal
     dfy = pd.read_csv(summary_file)
     data = pd.read_csv(data_file)
     labels = pd.read_csv(labels_file) 
-    mews = pd.read_csv(mews_file)
     hrv_ptt = pd.read_csv(hrv_ptt_file)
     
     #get splits from previous splitter 
@@ -130,12 +154,10 @@ def load_all_features(path_tuple, task, lead, get_waves=False, use_inference=Fal
 
     dfx = dfx[dfy['patient_id'].isin(data['CSN'])]
     labels = labels[labels['CSN'].isin(data['CSN'])]
-    mews = mews[mews['CSN'].isin(data['CSN'])]
     dfy = dfy.loc[dfy['patient_id'].isin(data['CSN'])]
     hrv_ptt = hrv_ptt.loc[hrv_ptt['CSN'].isin(data['CSN'])]
 
     # realign data, labels and dfy indices
-    # mews labels are aligned with dfy indices
     data = data.set_index('CSN')
     data = data.reindex(index=dfy['patient_id'])
     data = data.reset_index()
@@ -154,26 +176,26 @@ def load_all_features(path_tuple, task, lead, get_waves=False, use_inference=Fal
         labels = binarize(np.array(labels['SPO2']), task)
     elif task == "hypotension":
         labels = binarize(np.array(labels['MAP']), task)
+    elif task == "mews":
+        labels = binarize(np.array(labels['MEWS']), task, mews_cutoff=mews_cutoff)
     
-    mews = np.array(mews["mews_score"])
-    
-    xtrain = dfx[np.where(data['patient_id'].isin(splits['train_ids']))]
-    ytrain = labels[np.where(data['patient_id'].isin(splits['train_ids']))]
-    mtrain = mews[np.where(data['patient_id'].isin(splits['train_ids']))]
-
+    # np.where returns the indices where patient_id is in splits
+    xtrain = dfx[np.where(data['patient_id'].isin(splits['train_ids']))] 
+    ytrain = labels[np.where(data['patient_id'].isin(splits['train_ids']))]    
+        
     xval = dfx[np.where(data['patient_id'].isin(splits['val_ids']))]
     yval = labels[np.where(data['patient_id'].isin(splits['val_ids']))]
-    mval = mews[np.where(data['patient_id'].isin(splits['val_ids']))]
 
     xtest = dfx[np.where(data['patient_id'].isin(splits['test_ids']))]
     ytest = labels[np.where(data['patient_id'].isin(splits['test_ids']))]
-    mtest = mews[np.where(data['patient_id'].isin(splits['test_ids']))]
 
+    # handle the wide features (numerics data) omitting the first row (patient CSN)
     dfx_wide = process_wide_features(data)
     xtrain_wide = dfx_wide[np.where(data['patient_id'].isin(splits['train_ids']))][:, 1:]
     xval_wide = dfx_wide[np.where(data['patient_id'].isin(splits['val_ids']))][:, 1:]
     xtest_wide = dfx_wide[np.where(data['patient_id'].isin(splits['test_ids']))][:, 1:]
 
+    # grab the waveform derived features 
     hrv_perf_ptt_train = hrv_ptt[np.where(data['patient_id'].isin(splits['train_ids']))][:, 1:]
     hrv_perf_ptt_val = hrv_ptt[np.where(data['patient_id'].isin(splits['val_ids']))][:, 1:]
     hrv_perf_ptt_test = hrv_ptt[np.where(data['patient_id'].isin(splits['test_ids']))][:, 1:]
@@ -191,21 +213,21 @@ def load_all_features(path_tuple, task, lead, get_waves=False, use_inference=Fal
     xtest_norm = scale_input(in_np = xtest, scaler_pleth=scaler_sd_pleth, scaler_ecg=scaler_sd_ecg, leads=lead)
     
     if not get_waves:
-        if not return_mews:
-            return (xtrain_wide, xval_wide, xtest_wide), (ytrain, yval, ytest)
-        else:
-            return (xtrain_wide, xval_wide, xtest_wide), (ytrain, yval, ytest), (mtrain, mval, mtest)
+        return (xtrain_wide, xval_wide, xtest_wide), (ytrain, yval, ytest)
     if not use_inference:
         return (xtrain_norm, xval_norm, xtest_norm), (xtrain_wide, xval_wide, xtest_wide), (ytrain, yval, ytest)
     
     xtrain_norm_all, xval_norm_all, xtest_norm_all = torch.tensor(xtrain_norm).to(device).float(), torch.tensor(xval_norm).to(device).float(), torch.tensor(xtest_norm).to(device).float()  
     xtrain_norm_pleth, xval_norm_pleth, xtest_norm_pleth = torch.tensor(xtrain_norm[:, :1, :]).to(device).float(), torch.tensor(xval_norm[:, :1, :]).to(device).float(), torch.tensor(xtest_norm[:, :1, :]).to(device).float()   
     xtrain_norm_ecg, xval_norm_ecg, xtest_norm_ecg = torch.tensor(xtrain_norm[:, 1:, :]).to(device).float(), torch.tensor(xval_norm[:, 1:, :]).to(device).float(), torch.tensor(xtest_norm[:, 1:, :]).to(device).float()    
-
-    if not two_models:
+    # otherwise run inference
+    
+    # check whether we want to use two models and concatenate waveform embeddings 
+    if not two_models: 
         extract_model = load_model(model_path, model_type)
         extract_model.eval()
         
+        # which lead or combo of leads to use
         if lead == 'All':
             xtrain_embed = run_batch_inference(64, xtrain_norm_all, extract_model)
             xval_embed = run_batch_inference(64, xval_norm_all, extract_model)
@@ -218,6 +240,8 @@ def load_all_features(path_tuple, task, lead, get_waves=False, use_inference=Fal
             xtrain_embed = run_batch_inference(64, xtrain_norm_pleth, extract_model)
             xval_embed = run_batch_inference(64, xval_norm_pleth, extract_model)
             xtest_embed = run_batch_inference(64, xtest_norm_pleth, extract_model)
+            
+    # concatenates both ECG and PPG waveform embeddings 
     else:
         extract_model_pleth = load_model(pleth_model_path, model_type)
         extract_model_pleth.eval()
@@ -241,11 +265,7 @@ def load_all_features(path_tuple, task, lead, get_waves=False, use_inference=Fal
     all_xval = np.concatenate((xval_wide, xval_embed), axis=1)
     all_xtest = np.concatenate((xtest_wide, xtest_embed), axis=1)
 
-    # otherwise run inference
-    if not return_mews:
-        return (all_xtrain, all_xval, all_xtest), (ytrain, yval, ytest)
-    else:
-        return (all_xtrain, all_xval, all_xtest), (ytrain, yval, ytest), (mtrain, mval, mtest)
+    return (all_xtrain, all_xval, all_xtest), (ytrain, yval, ytest)
 
 def filter_by_index(data_tuple, indices):
     (xtrain, xval, xtest), (ytrain, yval, ytest) = data_tuple

@@ -20,29 +20,26 @@ def bootstrap_deep_models(configs, time, task, data_paths):
     print(f"----Starting the {time} timepoint-----")
         
     prna_model_path = "/deep2/group/ed-monitor/models/prna/outputs-wide-64-15sec-bs64/saved_models/ctn/fold_1/ctn.tar"
-    path_tuple = data_paths["h5py_file"], data_paths["summary_file"], data_paths["labels_file"], data_paths["data_file"], data_paths["all_splits_file"], data_paths["hrv_ptt_file"]
-
-    if task == "tachycardia":
-        models = data_paths["tachycardia_models"]
-    if task == "hypotension":
-        models = data_paths["hypotension_models"]    
-    if task == "hypoxia":
-        models = data_paths["hypoxia_models"]    
     
+    if task != "mews":
+        path_tuple = data_paths["h5py_file"], data_paths["summary_file"], data_paths["labels_file"], data_paths["data_file"], data_paths["all_splits_file"], data_paths["hrv_ptt_file"]
+    else:
+        path_tuple = data_paths["h5py_file"], data_paths["summary_file"], data_paths["mews_labels_file"], data_paths["data_file"], data_paths["all_splits_file"], data_paths["hrv_ptt_file"]
+
     print(f"starting task : {task}")
 
     for config in configs:
         if config["wave_type"] == "ECG":
             mod = preTrainedPRNA(1, 1, True, 64, config["wave_size"], prna_model_path)
-            model_path = models["ecg_file"]
+            model_path = data_paths[task]["ecg_model_file"]
             lead = "ECG"
         elif config["wave_type"] == "Pleth":
             mod = preTrainedPRNA(1, 1, True, 64, config["wave_size"], prna_model_path)
-            model_path = models["pleth_file"]
+            model_path = data_paths[task]["pleth_model_file"]
             lead = "Pleth"
         else:
             mod = preTrainedPRNA(2, 1, True, 64, config["wave_size"], prna_model_path)
-            model_path = models["ecg_pleth_file"]
+            model_path = data_paths[task]["ecg_pleth_model_file"]
             lead = 'All'
 
         wave_type, wave_size = config["wave_type"], config["wave_size"]
