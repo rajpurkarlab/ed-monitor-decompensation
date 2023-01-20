@@ -72,11 +72,11 @@ def tune_light_gbm_val(data_tuple, hparams):
     return best_params
 
 def save_params_metrics_task(time, task, auroc, pr, params):
-    with open(prefix_path + time + "_" + task + "_results_params.json", 'w') as f:
+    with open(prefix_path + "lgbm/hparams/" + time + "_" + task + "_results_params.json", 'w') as f:
         json.dump(params, f)
-    with open(prefix_path + time + "_" + task + "_results_auroc.json", 'w') as f:
+    with open(prefix_path + "lgbm/results/" + time + "_" + task + "_results_auroc.json", 'w') as f:
         json.dump(auroc, f)
-    with open(prefix_path + time + "_" + task + "_results_pr.json", 'w') as f:
+    with open(prefix_path + "lgbm/results/" + time + "_" + task + "_results_pr.json", 'w') as f:
         json.dump(pr, f)
      
 def test_light_gbm(data_tuple, hparams):
@@ -113,18 +113,23 @@ def main():
         all_paths = json.load(fpc)
     
     times = ["60min", "90min", "120min"]
-    tasks = ["tachycardia", "hypotension", "hypoxia"]
+    tasks = ["tachycardia", "hypotension", "hypoxia", "mews"]
     
     for time in times:
         print(f"----Starting the {time} timepoint-----")
         
         data_paths = all_paths[time]
-        path_tuple = data_paths["h5py_file"], data_paths["summary_file"], data_paths["labels_file"], data_paths["data_file"], data_paths["all_splits_file"], data_paths["hrv_ptt_file"]
 
         for task in tasks:
             auroc_dict, pr_dict, param_dict = defaultdict(list), defaultdict(list), defaultdict(list)
             print(f"starting task : {task}")
             
+            # get mews labels file instead of VS labels file if applicable
+            if task != 'mews':
+                path_tuple = data_paths["h5py_file"], data_paths["summary_file"], data_paths["labels_file"], data_paths["data_file"], data_paths["all_splits_file"], data_paths["hrv_ptt_file"]
+            else:
+                path_tuple = data_paths["h5py_file"], data_paths["summary_file"], data_paths["mews_labels_file"], data_paths["data_file"], data_paths["all_splits_file"], data_paths["hrv_ptt_file"]
+
             for name in config_names:
                 config = config_dict[name]
                 if config["include_wave"] and config["wave_type"] == "Both":
