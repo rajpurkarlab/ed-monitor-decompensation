@@ -10,23 +10,28 @@ from torch import nn
 import torch
 import random 
 
+TACHYCARDIA_CUTOFF = 110
+HYPOTENSION_CUTOFF = 65
+HYPOXIA_CUTOFF = 90
+MEWS_CUTOFF = 4
+
 # labels is a vector of label vectors to be turned into binary labels based off 
 # the cutoff threshold value
-def binarize(labels, task, mews_cutoff=4):
-    binarized = np.empty_like(labels)
+def binarize(labels, task, mews_cutoff=MEWS_CUTOFF):
+    binarized = np.zeros_like(labels)
     binarized[:] = np.nan
     if task == "tachycardia":
-        binarized[labels <= 110] = 0
-        binarized[labels > 110] = 1
+        binarized[labels <= TACHYCARDIA_CUTOFF] = 0
+        binarized[labels > TACHYCARDIA_CUTOFF] = 1
     elif task == "hypoxia":
-        binarized[labels < 90] = 1
-        binarized[labels >= 90] = 0
+        binarized[labels < HYPOXIA_CUTOFF] = 1
+        binarized[labels >= HYPOXIA_CUTOFF] = 0
     elif task == "hypotension":
-        binarized[labels >= 65] = 0
-        binarized[labels < 65] = 1
+        binarized[labels >= HYPOTENSION_CUTOFF] = 0
+        binarized[labels < HYPOTENSION_CUTOFF] = 1
     elif task == "mews":
-        binarized[labels < 4] = 0
-        binarized[labels >= 4] = 1
+        binarized[labels < mews_cutoff] = 0
+        binarized[labels >= mews_cutoff] = 1
     
     binarized = np.ravel(binarized)
     return binarized
@@ -126,8 +131,8 @@ Arrays with the suffix `_norm` are tensors of dimension (n_patients, waveform ch
 
 y values represent labels, either for tachycardia, hypotension, hypoxia or mews score predictions 
 """
-def load_all_features(path_tuple, task, lead, get_waves=False, use_inference=False, two_models=False, model_type=None, model_path=None, 
-                  pleth_model_path=None, ecg_model_path=None, mews_cutoff=4):
+def load_all_features(path_tuple, task, lead, get_waves=False, use_inference=False, two_models=False, model_type=None, 
+                      model_path=None, pleth_model_path=None, ecg_model_path=None, mews_cutoff=4):
     device_str = "cuda"
     device = torch.device(device_str if torch.cuda.is_available() else "cpu")   
     
@@ -161,9 +166,6 @@ def load_all_features(path_tuple, task, lead, get_waves=False, use_inference=Fal
     labels = labels.reindex(index=dfy['patient_id'])
     labels = labels.reset_index()
     
-    print("raw labels values:")
-    print(labels)
-    
     hrv_ptt = hrv_ptt.set_index('CSN')
     hrv_ptt = hrv_ptt.reindex(index=dfy['patient_id'])
     hrv_ptt = hrv_ptt.reset_index().to_numpy()
@@ -177,34 +179,15 @@ def load_all_features(path_tuple, task, lead, get_waves=False, use_inference=Fal
     elif task == "mews":
         labels = binarize(np.array(labels['MEWS']), task, mews_cutoff=mews_cutoff)
     
-    print("labels after binarization step...")
-    print(labels)
-    print(np.sum(labels == 1))
-    
     # np.where returns the indices where patient_id is in splits
     xtrain = dfx[np.where(data['patient_id'].isin(splits['train_ids']))] 
-    ytrain = labels[np.where(data['patient_id'].isin(splits['train_ids']))]
-    
-    indices_in_train_ids = np.where(data['patient_id'].isin(splits['train_ids']))[0]
-    
-    print(f"number of missing mews values for training splits: {np.sum(np.isnan(ytrain))}")
-    nan_train_ind = np.asarray(np.isnan(ytrain)).nonzero()[0]
-    print(f"CSN in training splits where mews score missing {data['patient_id'][indices_in_train_ids[nan_train_ind]]}")
-    
-    print("first 10 indices where labels is positive and the corresponding CSNs:")
-    ind = np.asarray(ytrain == 1).nonzero()[0]
-    print(ind[:10])
-    
-    for i in range(10):
-        print(data['patient_id'][indices_in_train_ids[ind[i]]])
-
+    ytrain = labels[np.where(data['patient_id'].isin(splits['train_ids']))]    
+        
     xval = dfx[np.where(data['patient_id'].isin(splits['val_ids']))]
     yval = labels[np.where(data['patient_id'].isin(splits['val_ids']))]
-    print(f"number of missing mews values for validation splits: {np.sum(np.isnan(yval))}")
 
     xtest = dfx[np.where(data['patient_id'].isin(splits['test_ids']))]
     ytest = labels[np.where(data['patient_id'].isin(splits['test_ids']))]
-    print(f"number of missing mews values for test splits: {np.sum(np.isnan(ytest))}")
 
     # handle the wide features (numerics data) omitting the first row (patient CSN)
     dfx_wide = process_wide_features(data)
