@@ -48,7 +48,6 @@ class DecompensationDataset(pl.LightningDataModule):
     def setup(self,stage=None):
         data_tuple = load_all_features(self.path_tuple, self.task, self.lead, get_waves=True, use_inference=False)
         (xtrain_norm, xval_norm, xtest_norm), (xtrain_wide, xval_wide, xtest_wide), (ytrain, yval, ytest) = data_tuple
-        print(ytrain[:100])
         data_len = xtrain_norm.shape[-1]
                 
         #Set Datasets 
