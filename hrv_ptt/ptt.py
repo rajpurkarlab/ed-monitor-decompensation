@@ -10,8 +10,8 @@ def get_PTTs(CSN, pleth, ii, csns, verbose=False):
     """
     pleth_search = pleth[np.where(csns == CSN)].reshape(7500,)
     ii_search = ii[np.where(csns == CSN)].reshape(7500,)
-    ii_peaks, _ = find_peaks(ii_search, distance=75)
-    pleth_peaks, _ = find_peaks(pleth_search, distance=75)
+    ii_peaks, _ = find_peaks(ii_search, distance=37)
+    pleth_peaks, _ = find_peaks(pleth_search, distance=37)
     ii_peaks_norm = ii_peaks * 8 
     pleth_peaks_norm = pleth_peaks * 8
     
